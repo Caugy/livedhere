@@ -6,6 +6,7 @@
   <p class="crumb"><a href="/">Home</a> · <%= mode === 'edit' ? 'Edit review' : 'Write a review' %></p>
   <h1><%= mode === 'edit' ? 'Edit your review' : 'Write a review' %></h1>
   <p class="lede tight">Start with what you remember. Ratings are optional — skip any that don’t apply. Only the address and whether you rented or owned are required.</p>
+  <p class="hint-box">Reviews are your own opinions. LivedHere does not verify that a review is accurate, or that the reviewer lived at the home. A Verified badge only means a document was reviewed. Please read the <a href="/disclaimer">Disclaimer</a> before posting.</p>
 
   <% if (errors && errors.length) { %>
     <div class="flash flash-error" role="alert">
@@ -153,6 +154,11 @@
         <button type="button" class="star-clear" data-clear="would_recommend">Clear</button>
       </fieldset>
     </fieldset>
+
+    <label class="check">
+      <input type="checkbox" name="disclaimer_agree" value="1" required <%= values.disclaimerAgree ? 'checked' : '' %>>
+      <span>I confirm this review reflects my honest experience and I agree to the <a href="/disclaimer" target="_blank" rel="noopener">Disclaimer</a></span>
+    </label>
 
     <div class="form-actions">
       <button type="submit" class="btn btn-primary"><%= mode === 'edit' ? 'Save changes' : 'Publish review' %></button>

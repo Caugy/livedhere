@@ -7,6 +7,7 @@
     <nav aria-label="Footer">
       <a href="/">Home</a>
       <a href="/about">About</a>
+      <a href="/disclaimer">Disclaimer</a>
       <a href="/review">Write a review</a>
       <% if (currentUser && currentUser.isStaff) { %>
         <a href="/moderation">Moderation</a>
@@ -19,7 +20,7 @@
     </nav>
   </div>
   <div class="wrap footer-note">
-    <p>Browsing is public. Posting a review takes an account. This local MVP is not a deployed product — sample reviews use fictional addresses.</p>
+    <p>Browsing is public. Posting a review takes an account. Sample reviews use fictional addresses. Reviews are the opinions of individual users — read the <a href="/disclaimer">Disclaimer</a>.</p>
   </div>
 </footer>
 <script src="/app.js"></script>

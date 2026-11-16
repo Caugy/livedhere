@@ -138,6 +138,18 @@ function setFlash(req, type, message) {
   req.session.flash = { type, message };
 }
 
+function pendingReviewFlash(review, { isEdit = false } = {}) {
+  const volume = Boolean(review && (review.moderationReasons || []).includes('volume_24h'));
+  if (volume) {
+    return isEdit
+      ? 'Your changes were saved and the review is still awaiting review before it appears publicly. Because more than one review was submitted within 24 hours, a moderator will check it first.'
+      : 'Your review was saved and is awaiting review before it appears publicly. Because you already submitted a review in the last 24 hours, this one will be checked first.';
+  }
+  return isEdit
+    ? 'Your changes were saved and the review is awaiting approval before it appears publicly.'
+    : 'Your review was saved and is awaiting approval before it appears publicly.';
+}
+
 function safeNext(value, fallback = '/') {
   if (typeof value === 'string' && value.startsWith('/') && !value.startsWith('//') && !value.includes('\\')) {
     return value;
@@ -244,6 +256,9 @@ function collectReviewInput(body) {
   if (!state) errors.push('State is required.');
   if (!zip) errors.push('ZIP code is required.');
   if (!occupancyType) errors.push('Please say whether you rented or owned the home.');
+  if (!(body.disclaimer_agree === '1' || body.disclaimer_agree === 'on')) {
+    errors.push('Please confirm that this review reflects your honest experience and that you agree to the Disclaimer.');
+  }
 
   const yearFrom = parseOptionalYear(body.year_from);
   const stillLiving = body.still_living === '1' || body.still_living === 'on';
@@ -273,6 +288,7 @@ function collectReviewInput(body) {
       wouldRecommend: parseWouldRecommend(body.would_recommend),
       ratings,
       anonymous: body.anonymous === '1' || body.anonymous === 'on',
+      disclaimerAgree: body.disclaimer_agree === '1' || body.disclaimer_agree === 'on',
     },
   };
 }
@@ -403,7 +419,7 @@ app.post('/review', writeLimiter, requireCanPost, async (req, res) => {
     req,
     'success',
     review.isPending
-      ? 'Your review was saved and is awaiting approval before it appears publicly.'
+      ? pendingReviewFlash(review)
       : 'Your review is up. Thank you for sharing it.'
   );
   await saveSession(req);
@@ -472,7 +488,7 @@ app.post('/reviews/:id', writeLimiter, requireCanPost, async (req, res, next) =>
     req,
     'success',
     updated && updated.isPending
-      ? 'Your changes were saved and the review is awaiting approval before it appears publicly.'
+      ? pendingReviewFlash(updated, { isEdit: true })
       : 'Your review has been updated.'
   );
   await saveSession(req);
@@ -614,6 +630,10 @@ app.post('/account/display-name', requireAuth, async (req, res) => {
 
 app.get('/about', (req, res) => {
   res.render('about', { title: 'About LivedHere' });
+});
+
+app.get('/disclaimer', (req, res) => {
+  res.render('disclaimer', { title: 'Disclaimer' });
 });
 
 app.get('/reviews/:id/report', requireAuth, (req, res, next) => {
@@ -948,6 +968,7 @@ function blankForm() {
     wouldRecommend: null,
     ratings: {},
     anonymous: true,
+    disclaimerAgree: false,
   };
 }
 
@@ -968,6 +989,7 @@ function valuesFromReview(review, property) {
     wouldRecommend: review.would_recommend,
     ratings: review.ratings || {},
     anonymous: review.anonymous,
+    disclaimerAgree: false,
   };
 }
 

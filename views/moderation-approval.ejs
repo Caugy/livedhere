@@ -3,7 +3,7 @@
 <main class="wrap page">
   <%- include('partials/flash') %>
   <h1>Awaiting approval</h1>
-  <p class="lede tight">Reviews that tripped the content filter are held here. They are not public and are not counted in ratings until you approve them. Flagged words are highlighted.</p>
+  <p class="lede tight">Reviews held for a look before they go public — including content-filter flags and more than one review from the same person within 24 hours. They are not public and are not counted in ratings until you approve them. Flagged words are highlighted.</p>
   <%- include('partials/mod-nav') %>
 
   <% if (!queue.length) { %>
@@ -14,7 +14,7 @@
     <article class="mod-card" id="approval-<%= item.review.id %>">
       <header class="mod-card-head">
         <div>
-          <p class="eyebrow">Awaiting approval<% if (item.flaggedWords.length) { %> · <%= item.flaggedWords.join(', ') %><% } %></p>
+          <p class="eyebrow">Awaiting approval<% if (item.reasonLabels && item.reasonLabels.length) { %> · <%= item.reasonLabels.join(' · ') %><% } else if (item.flaggedWords.length) { %> · <%= item.flaggedWords.join(', ') %><% } %></p>
           <h2>
             <% if (item.property) { %><a href="/properties/<%= item.property.id %>"><%= item.property.address %></a><% } else { %>Unknown address<% } %>
           </h2>

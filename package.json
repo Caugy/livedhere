@@ -9,7 +9,7 @@
     "dev": "node server.js",
     "seed": "node -e \"require('./db').resetAndSeed()\"",
     "screenshots": "node scripts/screenshots.js",
-    "test": "node --test"
+    "test": "node --test --test-concurrency=1"
   },
   "engines": {
     "node": ">=18"

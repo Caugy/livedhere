@@ -50,6 +50,17 @@ function isAllowedDocument(occupancy, documentType) {
   return documentsFor(occupancy).some((d) => d.id === documentType);
 }
 
+const VOLUME_WINDOW_HOURS = 24;
+
+const MODERATION_REASONS = [
+  { id: 'content_filter', label: 'Flagged by the content filter' },
+  { id: 'volume_24h', label: 'Multiple reviews within 24 hours' },
+];
+
+function moderationReasonLabel(id) {
+  return (MODERATION_REASONS.find((r) => r.id === id) || {}).label || id;
+}
+
 function isStaff(user) {
   return Boolean(user && (user.role === 'moderator' || user.role === 'admin'));
 }
@@ -76,6 +87,9 @@ module.exports = {
   documentLabel,
   documentsFor,
   isAllowedDocument,
+  VOLUME_WINDOW_HOURS,
+  MODERATION_REASONS,
+  moderationReasonLabel,
   isStaff,
   isSuspended,
   verificationBadge,

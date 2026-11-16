@@ -5,6 +5,7 @@
   <%- include('partials/flash') %>
 
   <p class="crumb"><a href="/">Home</a> · <a href="/search?q=<%= encodeURIComponent(property.city) %>"><%= property.city %></a></p>
+  <p class="hint-box legal-notice">Reviews are the opinions of the people who wrote them, not LivedHere. We don’t verify that a review is accurate or that the reviewer lived here. A Verified badge only means a document was reviewed. Read the <a href="/disclaimer">Disclaimer</a>.</p>
 
   <header class="property-hero">
     <div>
@@ -163,6 +164,8 @@
       </article>
     <% }) %>
   </section>
+
+  <p class="hint-box legal-notice">Reviews are the opinions of the people who wrote them, not LivedHere. We don’t verify that a review is accurate or that the reviewer lived here. A Verified badge only means a document was reviewed. Read the <a href="/disclaimer">Disclaimer</a>.</p>
 </main>
 
 <% if (currentUser) { %>

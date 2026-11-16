@@ -615,3 +615,9 @@ mark.flagged-term {
   border-radius: 4px;
   font-weight: 700;
 }
+
+/* Legal / disclaimer page uses the same type as the rest of the site. */
+.legal-doc h2 { margin-top: 2rem; }
+.legal-notice { margin: 1rem 0 1.25rem; }
+.review-form .hint-box { margin-bottom: 1.25rem; }
+

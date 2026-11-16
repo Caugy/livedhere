@@ -9,7 +9,9 @@ const policy = require('./policy');
 const uploads = require('./uploads');
 const contentFilter = require('./content-filter');
 
-const DATA_DIR = path.join(__dirname, 'data');
+const DATA_DIR = process.env.LIVEDHERE_DATA_DIR
+  ? path.resolve(process.env.LIVEDHERE_DATA_DIR)
+  : path.join(__dirname, 'data');
 const DB_PATH = path.join(DATA_DIR, 'reviews.db');
 const BCRYPT_ROUNDS = 10;
 
@@ -128,6 +130,7 @@ function migrateExtras(database) {
   addColumn(database, 'reviews', 'rejected_reason', 'TEXT');
   addColumn(database, 'reviews', 'moderation_decided_at', 'TEXT');
   addColumn(database, 'reviews', 'moderation_decided_by', 'INTEGER');
+  addColumn(database, 'reviews', 'moderation_reasons', 'TEXT');
 
   database.exec(`
     CREATE TABLE IF NOT EXISTS reports (
@@ -189,23 +192,65 @@ function isPubliclyListed(review) {
   return Boolean(review) && !review.hidden && (review.moderation_status || 'published') === 'published';
 }
 
-function reviewFilterFields(data) {
+function parseReasonList(value) {
+  if (!value) return [];
+  if (Array.isArray(value)) return value.filter(Boolean);
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+  } catch {
+    return [];
+  }
+}
+
+function countReviewsInWindow(userId, { hours = policy.VOLUME_WINDOW_HOURS, excludeId = null, database = null } = {}) {
+  const dbh = database || getDb();
+  const window = `-${Number(hours)} hours`;
+  if (excludeId) {
+    return dbh
+      .prepare(
+        `SELECT COUNT(*) AS n FROM reviews
+         WHERE user_id = ? AND created_at >= datetime('now', ?) AND id != ?`
+      )
+      .get(userId, window, excludeId).n;
+  }
+  return dbh
+    .prepare(
+      `SELECT COUNT(*) AS n FROM reviews
+       WHERE user_id = ? AND created_at >= datetime('now', ?)`
+    )
+    .get(userId, window).n;
+}
+
+function reviewFilterFields(data, { user = null, excludeId = null, applyVolume = true } = {}) {
+  const reasons = [];
   const result = contentFilter.scanReview({
     reviewText: data.reviewText,
     pros: data.pros,
     cons: data.cons,
   });
+  let flagged_json = null;
   if (result.flagged) {
+    reasons.push('content_filter');
+    flagged_json = JSON.stringify(result.matches);
+  }
+  if (applyVolume && user && !policy.isStaff(user)) {
+    const recent = countReviewsInWindow(user.id, { excludeId });
+    if (recent >= 1) reasons.push('volume_24h');
+  }
+  if (reasons.length) {
     return {
       moderation_status: 'pending',
-      flagged_json: JSON.stringify(result.matches),
+      flagged_json,
       rejected_reason: null,
+      moderation_reasons: JSON.stringify(reasons),
     };
   }
   return {
     moderation_status: 'published',
     flagged_json: null,
     rejected_reason: null,
+    moderation_reasons: null,
   };
 }
 
@@ -435,6 +480,10 @@ function hydrateReview(row, verifiedMap) {
   if (row.flagged_json) {
     try { flaggedMatches = JSON.parse(row.flagged_json) || []; } catch { flaggedMatches = []; }
   }
+  let moderationReasons = parseReasonList(row.moderation_reasons);
+  if (!moderationReasons.length && moderationStatus === 'pending' && flaggedMatches.length) {
+    moderationReasons = ['content_filter'];
+  }
   let reviewerName;
   if (row.anonymous) {
     reviewerName = contentFilter.anonymousLabel({ verified, occupancy_type: row.occupancy_type });
@@ -453,6 +502,8 @@ function hydrateReview(row, verifiedMap) {
     isPending: moderationStatus === 'pending',
     isRejected: moderationStatus === 'rejected',
     flaggedMatches,
+    moderationReasons,
+    moderationReasonLabels: moderationReasons.map((id) => policy.moderationReasonLabel(id)),
     rejected_reason: row.rejected_reason || null,
     verified,
     verificationBadge: badge,
@@ -475,20 +526,24 @@ function getReviewById(id) {
 function insertReview(data) {
   const ratings = parseRatings(data.ratings);
   const skipFilter = Boolean(data.skipFilter);
+  const user = data.userId ? getUserById(data.userId) : null;
   const filter = skipFilter
     ? {
         moderation_status: data.moderationStatus || 'published',
         flagged_json: data.flaggedJson || null,
         rejected_reason: data.rejectedReason || null,
+        moderation_reasons: data.moderationReasons
+          ? JSON.stringify(parseReasonList(data.moderationReasons))
+          : null,
       }
-    : reviewFilterFields(data);
+    : reviewFilterFields(data, { user, applyVolume: true });
   const result = getDb()
     .prepare(
       `INSERT INTO reviews (
          property_id, user_id, occupancy_type, unit, year_from, year_to, still_living,
          review_text, pros, cons, would_recommend, ratings_json, anonymous, is_sample,
-         moderation_status, flagged_json, rejected_reason
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+         moderation_status, flagged_json, rejected_reason, moderation_reasons
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       data.propertyId,
@@ -507,14 +562,23 @@ function insertReview(data) {
       data.isSample ? 1 : 0,
       filter.moderation_status,
       filter.flagged_json,
-      filter.rejected_reason
+      filter.rejected_reason,
+      filter.moderation_reasons
     );
   return getReviewById(result.lastInsertRowid);
 }
 
 function updateReview(id, data) {
   const ratings = parseRatings(data.ratings);
-  const filter = reviewFilterFields(data);
+  const existing = getReviewById(id);
+  const user = existing ? getUserById(existing.user_id) : null;
+  const filter = reviewFilterFields(data, { user, excludeId: id, applyVolume: false });
+  if (existing && existing.isPending && (existing.moderationReasons || []).includes('volume_24h')) {
+    const reasons = new Set(parseReasonList(filter.moderation_reasons));
+    reasons.add('volume_24h');
+    filter.moderation_status = 'pending';
+    filter.moderation_reasons = JSON.stringify([...reasons]);
+  }
   getDb()
     .prepare(
       `UPDATE reviews SET
@@ -522,6 +586,7 @@ function updateReview(id, data) {
          still_living = ?, review_text = ?, pros = ?, cons = ?, would_recommend = ?,
          ratings_json = ?, anonymous = ?, updated_at = datetime('now'),
          moderation_status = ?, flagged_json = ?, rejected_reason = ?,
+         moderation_reasons = ?,
          moderation_decided_at = NULL, moderation_decided_by = NULL
        WHERE id = ?`
     )
@@ -541,6 +606,7 @@ function updateReview(id, data) {
       filter.moderation_status,
       filter.flagged_json,
       filter.rejected_reason,
+      filter.moderation_reasons,
       id
     );
   return getReviewById(id);
@@ -1617,6 +1683,9 @@ function getApprovalQueue() {
       property: property ? { ...property, address: formatAddress(property) } : null,
       highlighted,
       flaggedWords: [...new Set((review.flaggedMatches || []).map((m) => m.word))],
+      reasonLabels: review.moderationReasonLabels && review.moderationReasonLabels.length
+        ? review.moderationReasonLabels
+        : (review.flaggedMatches && review.flaggedMatches.length ? [policy.moderationReasonLabel('content_filter')] : []),
     };
   });
 }
@@ -1671,6 +1740,13 @@ function rejectReview(reviewId, actorId, reason) {
 
 function pendingApprovalCount() {
   return getDb().prepare("SELECT COUNT(*) AS n FROM reviews WHERE moderation_status = 'pending'").get().n;
+}
+
+function closeDb() {
+  if (db) {
+    db.close();
+    db = null;
+  }
 }
 
 function resetAndSeed() {
@@ -1749,6 +1825,9 @@ module.exports = {
   approveReview,
   rejectReview,
   pendingApprovalCount,
+  countReviewsInWindow,
+  closeDb,
+  DATA_DIR,
   ADMIN_EMAIL: 'admin@livedhere.example',
   ADMIN_CREDENTIALS_PATH: path.join(DATA_DIR, 'admin-credentials.txt'),
 };
