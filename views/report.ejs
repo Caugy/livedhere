@@ -1,0 +1,39 @@
+<%- include('partials/head') %>
+<%- include('partials/header') %>
+<main class="wrap page narrow">
+  <%- include('partials/flash') %>
+  <p class="crumb"><a href="/properties/<%= property.id %>">Back to <%= property.street %></a></p>
+  <h1>Report this review</h1>
+  <p class="lede tight">Tell a moderator why this review should be looked at. You can report a review once. You can’t report your own.</p>
+
+  <article class="review-card compact">
+    <p class="reviewer"><%= review.reviewerName %></p>
+    <% if (review.review_text) { %><p class="review-body"><%= review.review_text.length > 280 ? review.review_text.slice(0, 280) + '…' : review.review_text %></p><% } %>
+  </article>
+
+  <% if (errors && errors.length) { %>
+    <div class="flash flash-error" role="alert"><ul><% errors.forEach((err) => { %><li><%= err %></li><% }) %></ul></div>
+  <% } %>
+
+  <form class="auth-form" method="post" action="/reviews/<%= review.id %>/report">
+    <%- include('partials/csrf') %>
+    <fieldset class="form-block" style="box-shadow:none;padding:0;border:0">
+      <legend>Reason</legend>
+      <% policy.REPORT_REASONS.forEach((reason) => { %>
+        <label class="check">
+          <input type="radio" name="reason" value="<%= reason.id %>" required <%= values.reason === reason.id ? 'checked' : '' %>>
+          <%= reason.label %>
+        </label>
+      <% }) %>
+    </fieldset>
+    <label class="field">
+      <span>Details <span class="optional">(optional)</span></span>
+      <textarea name="details" rows="4" maxlength="1000" placeholder="Anything a moderator should know."><%= values.details %></textarea>
+    </label>
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">Submit report</button>
+      <a class="btn btn-ghost" href="/properties/<%= property.id %>#review-<%= review.id %>">Cancel</a>
+    </div>
+  </form>
+</main>
+<%- include('partials/footer') %>

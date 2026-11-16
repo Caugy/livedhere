@@ -1,0 +1,96 @@
+<%- include('partials/head') %>
+<%- include('partials/header') %>
+<main class="wrap page">
+  <%- include('partials/flash') %>
+  <h1>Moderation</h1>
+  <p class="lede tight">Open reports, grouped by review. There are no email notifications — check this dashboard for new reports and verification requests. <%= pendingVerifications %> verification request<%= pendingVerifications === 1 ? '' : 's' %> waiting.</p>
+  <%- include('partials/mod-nav') %>
+
+  <% if (!queue.length) { %>
+    <div class="empty"><p>No open reports right now.</p></div>
+  <% } %>
+
+  <% queue.forEach((item) => { %>
+    <article class="mod-card">
+      <header class="mod-card-head">
+        <div>
+          <p class="eyebrow"><%= item.open_count %> open report<%= item.open_count === 1 ? '' : 's' %><% if (item.review && item.review.hidden) { %> · Hidden<%= item.review.hidden_source === 'auto' ? ' (auto)' : '' %><% } %></p>
+          <h2>
+            <% if (item.property) { %><a href="/properties/<%= item.property.id %>"><%= item.property.address %></a><% } else { %>Deleted property<% } %>
+          </h2>
+          <p class="muted">
+            By <%= item.author ? item.author.display_name : 'Unknown' %><% if (item.review && item.review.anonymous) { %> (posted anonymously; name visible only here)<% } %><% if (item.review) { %> · <%= item.review.occupancy_type === 'rented' ? 'Rented' : 'Owned' %><% if (item.review.verificationBadge) { %> · <%= item.review.verificationBadge %><% } %><% } %>
+            <% if (item.author && item.author.isSuspended) { %> · <span class="danger">Suspended from posting</span><% } %>
+          </p>
+        </div>
+      </header>
+
+      <% if (item.review && item.review.review_text) { %>
+        <p class="review-body"><%= item.review.review_text %></p>
+      <% } else if (item.review) { %>
+        <p class="muted">This review has no written comments.</p>
+      <% } %>
+
+      <div class="reason-pills">
+        <% Object.entries(item.reasonCounts).forEach(([id, count]) => { %>
+          <span class="badge"><%= reasonLabel(id) %> · <%= count %></span>
+        <% }) %>
+      </div>
+
+      <ul class="report-list">
+        <% item.reports.forEach((report) => { %>
+          <li>
+            <strong><%= reasonLabel(report.reason) %></strong>
+            <span class="muted">from <%= report.reporter_name %></span>
+            <% if (report.detailsFlagged) { %><span class="badge badge-pending">Flagged language</span><% } %>
+            <% if (report.detailsHtml) { %><p><%- report.detailsHtml %></p><% } else if (report.details) { %><p><%= report.details %></p><% } %>
+          </li>
+        <% }) %>
+      </ul>
+
+      <% if (item.review && item.review.hidden && item.review.hidden_reason) { %>
+        <p class="hidden-banner">Currently hidden. Author sees: “<%= item.review.hidden_reason %>”</p>
+      <% } %>
+
+      <div class="mod-actions">
+        <form method="post" action="/moderation/reviews/<%= item.review_id %>/dismiss">
+          <%- include('partials/csrf') %>
+          <button type="submit" class="btn btn-ghost">Dismiss reports</button>
+        </form>
+        <% if (item.review && item.review.hidden) { %>
+          <form method="post" action="/moderation/reviews/<%= item.review_id %>/restore">
+            <%- include('partials/csrf') %>
+            <button type="submit" class="btn btn-ghost">Restore review</button>
+          </form>
+        <% } else if (item.review) { %>
+          <form method="post" action="/moderation/reviews/<%= item.review_id %>/hide" class="inline-fields">
+            <%- include('partials/csrf') %>
+            <label class="sr-only" for="hide-reason-<%= item.review_id %>">Hide reason</label>
+            <input id="hide-reason-<%= item.review_id %>" type="text" name="reason" required maxlength="500" placeholder="Reason shown to the author">
+            <button type="submit" class="btn btn-ghost">Hide review</button>
+          </form>
+        <% } %>
+        <form method="post" action="/moderation/reviews/<%= item.review_id %>/delete" class="js-confirm-delete" data-confirm="Delete this review permanently? This cannot be undone.">
+          <%- include('partials/csrf') %>
+          <button type="submit" class="btn btn-ghost danger">Delete review</button>
+        </form>
+        <% if (item.author && !item.author.isStaff) { %>
+          <% if (item.author.isSuspended) { %>
+            <form method="post" action="/moderation/users/<%= item.author.id %>/unsuspend">
+              <%- include('partials/csrf') %>
+              <button type="submit" class="btn btn-ghost">Unsuspend author</button>
+            </form>
+          <% } else { %>
+            <form method="post" action="/moderation/users/<%= item.author.id %>/suspend" class="inline-fields">
+              <%- include('partials/csrf') %>
+              <label class="sr-only" for="suspend-<%= item.author.id %>">Suspend reason</label>
+              <input id="suspend-<%= item.author.id %>" type="text" name="reason" required maxlength="500" placeholder="Suspend from posting — reason">
+              <button type="submit" class="btn btn-ghost danger">Suspend author</button>
+            </form>
+          <% } %>
+        <% } %>
+      </div>
+    </article>
+  <% }) %>
+</main>
+<%- include('partials/footer') %>

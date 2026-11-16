@@ -1,0 +1,27 @@
+<footer class="site-footer">
+  <div class="wrap footer-inner">
+    <div>
+      <div class="wordmark wordmark-sm">LivedHere</div>
+      <p>Reviews from people who actually lived there — renters and owners.</p>
+    </div>
+    <nav aria-label="Footer">
+      <a href="/">Home</a>
+      <a href="/about">About</a>
+      <a href="/review">Write a review</a>
+      <% if (currentUser && currentUser.isStaff) { %>
+        <a href="/moderation">Moderation</a>
+      <% } %>
+      <% if (currentUser) { %>
+        <a href="/account">Your account</a>
+      <% } else { %>
+        <a href="/login">Log in</a>
+      <% } %>
+    </nav>
+  </div>
+  <div class="wrap footer-note">
+    <p>Browsing is public. Posting a review takes an account. This local MVP is not a deployed product — sample reviews use fictional addresses.</p>
+  </div>
+</footer>
+<script src="/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,29 @@
+<header class="site-header">
+  <div class="wrap header-inner">
+    <a class="wordmark" href="/">
+      <svg class="mark" viewBox="0 0 32 32" width="28" height="28" aria-hidden="true">
+        <path fill="currentColor" d="M16 3.2 3 13.1l1.3 1.6L6 13.3V27h8.2v-7.2h3.6V27H26V13.3l1.7 1.4L29 13.1 16 3.2z"/>
+      </svg>
+      <span>LivedHere</span>
+    </a>
+    <form class="header-search" action="/search" method="get" role="search">
+      <label class="sr-only" for="header-q">Search an address</label>
+      <input id="header-q" type="search" name="q" placeholder="Search an address or city" value="<%= typeof query !== 'undefined' ? query : '' %>">
+      <button type="submit">Search</button>
+    </form>
+    <nav class="nav" aria-label="Main">
+      <a href="/review" class="nav-write">Write a review</a>
+      <% if (currentUser) { %>
+        <% if (currentUser.isStaff) { %><a href="/moderation">Moderation</a><% } %>
+        <a href="/account"><%= currentUser.display_name %></a>
+        <form class="inline-form" action="/logout" method="post">
+    <%- include('csrf') %>
+          <button type="submit" class="linkish">Log out</button>
+        </form>
+      <% } else { %>
+        <a href="/login">Log in</a>
+        <a class="btn btn-small" href="/signup">Sign up</a>
+      <% } %>
+    </nav>
+  </div>
+</header>

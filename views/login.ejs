@@ -1,0 +1,34 @@
+<%- include('partials/head') %>
+<%- include('partials/header') %>
+
+<main class="wrap page narrow">
+  <%- include('partials/flash') %>
+  <h1>Log in</h1>
+  <p class="lede tight">You need an account to write, edit, or delete a review. Browsing stays public.</p>
+
+  <% if (errors && errors.length) { %>
+    <div class="flash flash-error" role="alert"><% errors.forEach((err) => { %><p><%= err %></p><% }) %></div>
+  <% } %>
+
+  <form class="auth-form" method="post" action="/login">
+    <%- include('partials/csrf') %>
+    <input type="hidden" name="next" value="<%= next %>">
+    <label class="field">
+      <span>Email</span>
+      <input type="email" name="email" required autocomplete="username" value="<%= values.email %>">
+    </label>
+    <label class="field">
+      <span>Password</span>
+      <input type="password" name="password" required autocomplete="current-password">
+    </label>
+    <button type="submit" class="btn btn-primary">Log in</button>
+  </form>
+
+  <p class="muted">No account yet? <a href="/signup?next=<%= encodeURIComponent(next) %>">Sign up</a>.</p>
+  <div class="hint-box">
+    <p>Demo resident: <strong>demo@livedhere.example</strong> / <strong>LivedHereDemo1</strong></p>
+    <p>Demo moderator: <strong>moderator@livedhere.example</strong> / <strong>LivedHereMod1</strong></p>
+  </div>
+</main>
+
+<%- include('partials/footer') %>

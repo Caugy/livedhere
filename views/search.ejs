@@ -1,0 +1,32 @@
+<%- include('partials/head') %>
+<%- include('partials/header') %>
+
+<main class="wrap page">
+  <%- include('partials/flash') %>
+  <h1>Search results<%= query ? ` for “${query}”` : '' %></h1>
+  <% if (!query) { %>
+    <p class="muted">Type an address, city, or ZIP to find a home.</p>
+  <% } else if (!results.length) { %>
+    <div class="empty">
+      <p>No homes match “<%= query %>” yet. If you lived there, you can write the first review.</p>
+      <a class="btn btn-primary" href="/review">Write a review</a>
+    </div>
+  <% } else { %>
+    <p class="muted"><%= results.length %> home<%= results.length === 1 ? '' : 's' %> found.</p>
+    <div class="card-grid">
+      <% results.forEach((property) => { %>
+        <a class="place-card" href="/properties/<%= property.id %>">
+          <% if (property.reviews.some((r) => r.is_sample)) { %><span class="badge badge-sample">Has sample reviews</span><% } %>
+          <h3><%= property.street %></h3>
+          <p class="muted"><%= property.city %>, <%= property.state %> <%= property.zip %> · <%= property.reviewCount %> review<%= property.reviewCount === 1 ? '' : 's' %></p>
+          <div class="place-card-rating">
+            <%- include('partials/stars', { value: property.aggregates.overall, size: 'md' }) %>
+            <span><%= property.aggregates.overall != null ? property.aggregates.overall.toFixed(1) : '—' %></span>
+          </div>
+        </a>
+      <% }) %>
+    </div>
+  <% } %>
+</main>
+
+<%- include('partials/footer') %>

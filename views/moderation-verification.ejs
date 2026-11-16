@@ -1,0 +1,84 @@
+<%- include('partials/head') %>
+<%- include('partials/header') %>
+<main class="wrap page">
+  <%- include('partials/flash') %>
+  <h1>Verification requests</h1>
+  <p class="lede tight">Review the document, then approve the person as a verified renter or owner, or reject with a reason. The file is deleted after you decide. There are no email notifications.</p>
+  <%- include('partials/mod-nav') %>
+
+  <% if (!requests.length) { %>
+    <div class="empty"><p>No verification requests waiting.</p></div>
+  <% } %>
+
+  <% requests.forEach((request) => { %>
+    <article class="mod-card" id="verification-<%= request.id %>">
+      <header class="mod-card-head">
+        <div>
+          <p class="eyebrow"><%= request.occupancyLabel %> · <%= request.documentLabel %></p>
+          <h2><%= request.address || 'Address unavailable' %></h2>
+          <p class="muted">
+            Requested by <%= request.display_name %> (<%= request.email %>)
+            <% if (request.year_from || request.still_living || request.year_to) { %>
+              · Claimed dates:
+              <%= request.year_from || '?' %>–<%= request.still_living ? 'present' : (request.year_to || '?') %>
+            <% } %>
+          </p>
+        </div>
+      </header>
+
+      <p>
+        <a class="btn btn-primary" href="/moderation/verifications/<%= request.id %>/file" target="_blank" rel="noopener">View document</a>
+        <span class="muted">Opens the private file in a new tab. Only staff can access it.</span>
+      </p>
+      <% if (request.mime_type && request.mime_type.startsWith('image/')) { %>
+        <p class="doc-preview">
+          <img src="/moderation/verifications/<%= request.id %>/file" alt="Uploaded verification document">
+        </p>
+      <% } %>
+
+      <div class="mod-split">
+        <form method="post" action="/moderation/verifications/<%= request.id %>/approve" class="form-block">
+          <%- include('partials/csrf') %>
+          <h3>Approve as <%= request.badge %></h3>
+          <p class="field-help">Optionally confirm the dates they lived there. The upload will be deleted; only this decision is kept.</p>
+          <div class="grid-2">
+            <label class="field">
+              <span>From</span>
+              <select name="year_from">
+                <option value="">Year</option>
+                <% yearOptions.forEach((year) => { %>
+                  <option value="<%= year %>" <%= request.year_from === year ? 'selected' : '' %>><%= year %></option>
+                <% }) %>
+              </select>
+            </label>
+            <label class="field">
+              <span>Until</span>
+              <select name="year_to" <%= request.still_living ? 'disabled' : '' %>>
+                <option value="">Year</option>
+                <% yearOptions.forEach((year) => { %>
+                  <option value="<%= year %>" <%= request.year_to === year ? 'selected' : '' %>><%= year %></option>
+                <% }) %>
+              </select>
+            </label>
+          </div>
+          <label class="check">
+            <input type="checkbox" name="still_living" value="1" <%= request.still_living ? 'checked' : '' %>>
+            Still lives there
+          </label>
+          <button type="submit" class="btn btn-primary">Approve</button>
+        </form>
+
+        <form method="post" action="/moderation/verifications/<%= request.id %>/reject" class="form-block">
+          <%- include('partials/csrf') %>
+          <h3>Reject</h3>
+          <label class="field">
+            <span>Reason shown to the requester</span>
+            <textarea name="reason" rows="4" required maxlength="500" placeholder="What was missing or why it couldn’t be verified."></textarea>
+          </label>
+          <button type="submit" class="btn btn-ghost danger">Reject and delete file</button>
+        </form>
+      </div>
+    </article>
+  <% }) %>
+</main>
+<%- include('partials/footer') %>

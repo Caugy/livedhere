@@ -1,0 +1,7 @@
+<% const v = typeof value === 'number' ? value : null;
+   const starSize = typeof size === 'undefined' ? '' : size; %>
+<span class="stars<%= starSize ? ' stars-' + starSize : '' %>" title="<%= v == null ? 'No rating yet' : v.toFixed(1) + ' out of 5' %>">
+  <span class="stars-bg" aria-hidden="true">★★★★★</span>
+  <span class="stars-fill" style="width: <%= starPercent(v) %>%" aria-hidden="true">★★★★★</span>
+  <span class="sr-only"><%= v == null ? 'No rating yet' : v.toFixed(1) + ' out of 5 stars' %></span>
+</span>

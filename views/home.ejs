@@ -1,0 +1,95 @@
+<%- include('partials/head') %>
+<%- include('partials/header') %>
+
+<main>
+  <section class="hero">
+    <div class="wrap hero-inner">
+      <p class="eyebrow">For renters and owners</p>
+      <h1>What was it actually like to live there?</h1>
+      <p class="lede">LivedHere collects honest reviews of houses and apartments from people who rented or owned them — not staged listing copy.</p>
+      <form class="hero-search" action="/search" method="get" role="search">
+        <label class="sr-only" for="home-q">Search by address, city, or ZIP</label>
+        <input id="home-q" type="search" name="q" placeholder="Try 123 Example St or Springfield" autofocus>
+        <button type="submit" class="btn btn-primary">Search homes</button>
+      </form>
+      <p class="hero-hint">Sample data is included so you can click around. Addresses like “123 Example St” are fictional.</p>
+    </div>
+  </section>
+
+  <section class="wrap">
+    <%- include('partials/flash') %>
+    <div class="stats">
+      <div class="stat"><strong><%= stats.reviews %></strong><span>reviews</span></div>
+      <div class="stat"><strong><%= stats.properties %></strong><span>homes</span></div>
+      <div class="stat"><strong><%= stats.users %></strong><span>residents</span></div>
+    </div>
+  </section>
+
+  <section class="wrap section">
+    <h2>How it works</h2>
+    <ol class="steps">
+      <li>
+        <strong>Look up an address</strong>
+        <p>Search a street, city, or ZIP to see what past residents had to say.</p>
+      </li>
+      <li>
+        <strong>Read the lived-in details</strong>
+        <p>Noise, repairs, landlords, HOA, utilities, neighbors — whatever people chose to rate.</p>
+      </li>
+      <li>
+        <strong>Share your own story</strong>
+        <p>Create a free account and write about a place you rented or owned. Start with your words; ratings are optional.</p>
+      </li>
+    </ol>
+  </section>
+
+  <section class="wrap section">
+    <div class="section-head">
+      <h2>Sample homes</h2>
+      <p>Fictional addresses with example reviews, so the first version has something to browse.</p>
+    </div>
+    <div class="card-grid">
+      <% featured.forEach((property) => { %>
+        <a class="place-card" href="/properties/<%= property.id %>">
+          <p class="eyebrow"><span class="badge badge-sample">Sample</span> <%= property.city %>, <%= property.state %></p>
+          <h3><%= property.street %></h3>
+          <p class="muted"><%= property.zip %> · <%= property.reviewCount %> review<%= property.reviewCount === 1 ? '' : 's' %></p>
+          <div class="place-card-rating">
+            <%- include('partials/stars', { value: property.aggregates.overall, size: 'md' }) %>
+            <span><%= property.aggregates.overall != null ? property.aggregates.overall.toFixed(1) : '—' %></span>
+          </div>
+        </a>
+      <% }) %>
+    </div>
+  </section>
+
+  <section class="wrap section">
+    <div class="section-head">
+      <h2>Recent reviews</h2>
+    </div>
+    <div class="review-previews">
+      <% recent.forEach((review) => { %>
+        <article class="preview-card">
+          <% if (review.is_sample) { %><span class="badge badge-sample">Sample</span><% } %>
+          <h3><a href="/properties/<%= review.property.id %>"><%= review.property.street %></a></h3>
+          <p class="muted"><%= review.property.city %>, <%= review.property.state %> · <%= review.occupancy_type === 'rented' ? 'Rented' : 'Owned' %><% const yrs = formatYears(review); if (yrs) { %> · <%= yrs %><% } %></p>
+          <div class="place-card-rating">
+            <%- include('partials/stars', { value: review.ratings.overall, size: 'sm' }) %>
+            <span class="muted"><%= review.reviewerName %></span>
+          </div>
+          <% if (review.review_text) { %>
+            <p><%= review.review_text.length > 180 ? review.review_text.slice(0, 180) + '…' : review.review_text %></p>
+          <% } %>
+        </article>
+      <% }) %>
+    </div>
+  </section>
+
+  <section class="wrap section cta-band">
+    <h2>Lived somewhere worth talking about?</h2>
+    <p>Write it down while you still remember the water pressure, the neighbors, and whether the deposit came back.</p>
+    <a class="btn btn-primary" href="/review">Write a review</a>
+  </section>
+</main>
+
+<%- include('partials/footer') %>

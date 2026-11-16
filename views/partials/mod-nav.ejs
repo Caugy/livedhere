@@ -1,0 +1,6 @@
+<nav class="mod-nav" aria-label="Moderation">
+  <a class="chip<%= tab === 'reports' ? ' is-active' : '' %>" href="/moderation">Reports</a>
+  <a class="chip<%= tab === 'approval' ? ' is-active' : '' %>" href="/moderation/approval">Awaiting approval<%= typeof pendingApprovals !== 'undefined' && pendingApprovals ? ' (' + pendingApprovals + ')' : '' %></a>
+  <a class="chip<%= tab === 'verification' ? ' is-active' : '' %>" href="/moderation/verification">Verification requests</a>
+  <a class="chip<%= tab === 'log' ? ' is-active' : '' %>" href="/moderation/log">Audit log</a>
+</nav>

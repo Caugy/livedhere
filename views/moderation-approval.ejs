@@ -1,0 +1,56 @@
+<%- include('partials/head') %>
+<%- include('partials/header') %>
+<main class="wrap page">
+  <%- include('partials/flash') %>
+  <h1>Awaiting approval</h1>
+  <p class="lede tight">Reviews that tripped the content filter are held here. They are not public and are not counted in ratings until you approve them. Flagged words are highlighted.</p>
+  <%- include('partials/mod-nav') %>
+
+  <% if (!queue.length) { %>
+    <div class="empty"><p>No reviews waiting for approval.</p></div>
+  <% } %>
+
+  <% queue.forEach((item) => { %>
+    <article class="mod-card" id="approval-<%= item.review.id %>">
+      <header class="mod-card-head">
+        <div>
+          <p class="eyebrow">Awaiting approval<% if (item.flaggedWords.length) { %> · <%= item.flaggedWords.join(', ') %><% } %></p>
+          <h2>
+            <% if (item.property) { %><a href="/properties/<%= item.property.id %>"><%= item.property.address %></a><% } else { %>Unknown address<% } %>
+          </h2>
+          <p class="muted">
+            Author (staff only): <%= item.author ? item.author.display_name : 'Unknown' %> (<%= item.author ? item.author.email : '' %>)
+            <% if (item.review.anonymous) { %> · Public byline would be “<%= item.review.reviewerName %>”<% } %>
+            · <%= item.review.occupancy_type === 'rented' ? 'Rented' : 'Owned' %>
+            <% if (item.review.is_sample) { %> · Sample<% } %>
+          </p>
+        </div>
+      </header>
+
+      <% if (item.review.review_text) { %>
+        <p class="review-body"><%- item.highlighted.review_text %></p>
+      <% } %>
+      <% if (item.review.pros) { %><p><strong>Pros.</strong> <%- item.highlighted.pros %></p><% } %>
+      <% if (item.review.cons) { %><p><strong>Cons.</strong> <%- item.highlighted.cons %></p><% } %>
+
+      <div class="mod-split" style="margin-top:1rem">
+        <form method="post" action="/moderation/reviews/<%= item.review.id %>/approve" class="form-block">
+          <%- include('partials/csrf') %>
+          <h3>Approve</h3>
+          <p class="field-help">Publish this review on the public property page and include it in ratings.</p>
+          <button type="submit" class="btn btn-primary">Approve and publish</button>
+        </form>
+        <form method="post" action="/moderation/reviews/<%= item.review.id %>/reject" class="form-block">
+          <%- include('partials/csrf') %>
+          <h3>Reject</h3>
+          <label class="field">
+            <span>Reason shown to the author</span>
+            <textarea name="reason" rows="3" required maxlength="500" placeholder="Why this review cannot be published."></textarea>
+          </label>
+          <button type="submit" class="btn btn-ghost danger">Reject</button>
+        </form>
+      </div>
+    </article>
+  <% }) %>
+</main>
+<%- include('partials/footer') %>

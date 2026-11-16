@@ -1,0 +1,100 @@
+<%- include('partials/head') %>
+<%- include('partials/header') %>
+<main class="wrap page narrow">
+  <%- include('partials/flash') %>
+  <p class="crumb"><a href="/account">Your account</a> · Verification</p>
+  <h1>Request verification</h1>
+  <p class="lede tight">Ask a moderator to confirm you lived at <strong><%= property.address %></strong> as a renter or owner. There are no email notifications — you’ll see the decision on your account.</p>
+
+  <% if (existing && existing.status === 'approved') { %>
+    <div class="flash flash-success">This address is already approved as a <%= existing.badge %>.</div>
+  <% } else if (existing && existing.status === 'pending') { %>
+    <div class="flash flash-info">A request for this address is already in the verification queue.</div>
+  <% } else { %>
+    <% if (existing && existing.status === 'rejected') { %>
+      <div class="flash flash-error">A previous request was rejected: <%= existing.reject_reason %> You can submit a new document.</div>
+    <% } %>
+
+    <% if (errors && errors.length) { %>
+      <div class="flash flash-error" role="alert"><ul><% errors.forEach((err) => { %><li><%= err %></li><% }) %></ul></div>
+    <% } %>
+
+    <div class="hint-box">
+      <p><strong>What to upload.</strong> Renters: a lease, rent receipt, utility bill, or renter’s insurance. Owners: a deed, closing disclosure, property tax bill, mortgage statement, or homeowner’s insurance.</p>
+      <p><strong>Redact sensitive numbers</strong> such as account numbers and Social Security numbers. Leave your name, the address, and relevant dates visible so a moderator can confirm you lived there.</p>
+      <p>PDF, JPG, or PNG. 10 MB or smaller. The file is stored privately and is deleted when a moderator decides.</p>
+    </div>
+
+    <form class="auth-form" method="post" action="/reviews/<%= review.id %>/verify" enctype="multipart/form-data" data-occupancy="<%= values.occupancyType %>">
+      <%- include('partials/csrf') %>
+      <fieldset class="segmented-wrap">
+        <legend>I am requesting verification as</legend>
+        <div class="segmented" role="radiogroup">
+          <label class="<%= values.occupancyType === 'rented' ? 'is-selected' : '' %>">
+            <input type="radio" name="occupancy_type" value="rented" required <%= values.occupancyType === 'rented' ? 'checked' : '' %>>
+            Renter
+          </label>
+          <label class="<%= values.occupancyType === 'owned' ? 'is-selected' : '' %>">
+            <input type="radio" name="occupancy_type" value="owned" required <%= values.occupancyType === 'owned' ? 'checked' : '' %>>
+            Owner
+          </label>
+        </div>
+      </fieldset>
+
+      <label class="field show-if-rented">
+        <span>Document type</span>
+        <select name="document_type" id="doc-renter">
+          <option value="">Select</option>
+          <% policy.RENTER_DOCUMENTS.forEach((doc) => { %>
+            <option value="<%= doc.id %>" <%= values.occupancyType === 'rented' && values.documentType === doc.id ? 'selected' : '' %>><%= doc.label %></option>
+          <% }) %>
+        </select>
+      </label>
+      <label class="field show-if-owned">
+        <span>Document type</span>
+        <select name="document_type" id="doc-owner">
+          <option value="">Select</option>
+          <% policy.OWNER_DOCUMENTS.forEach((doc) => { %>
+            <option value="<%= doc.id %>" <%= values.occupancyType === 'owned' && values.documentType === doc.id ? 'selected' : '' %>><%= doc.label %></option>
+          <% }) %>
+        </select>
+      </label>
+
+      <div class="grid-2">
+        <label class="field">
+          <span>Lived here from <span class="optional">(optional)</span></span>
+          <select name="year_from">
+            <option value="">Year</option>
+            <% yearOptions.forEach((year) => { %>
+              <option value="<%= year %>" <%= values.yearFrom === year ? 'selected' : '' %>><%= year %></option>
+            <% }) %>
+          </select>
+        </label>
+        <label class="field">
+          <span>Until <span class="optional">(optional)</span></span>
+          <select name="year_to" <%= values.stillLiving ? 'disabled' : '' %>>
+            <option value="">Year</option>
+            <% yearOptions.forEach((year) => { %>
+              <option value="<%= year %>" <%= values.yearTo === year ? 'selected' : '' %>><%= year %></option>
+            <% }) %>
+          </select>
+        </label>
+      </div>
+      <label class="check">
+        <input type="checkbox" name="still_living" value="1" <%= values.stillLiving ? 'checked' : '' %>>
+        I still live here
+      </label>
+
+      <label class="field">
+        <span>Proof document</span>
+        <input type="file" name="document" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" required>
+      </label>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Submit request</button>
+        <a class="btn btn-ghost" href="/account">Cancel</a>
+      </div>
+    </form>
+  <% } %>
+</main>
+<%- include('partials/footer') %>

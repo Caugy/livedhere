@@ -1,0 +1,78 @@
+<%- include('partials/head') %>
+<%- include('partials/header') %>
+
+<main class="wrap page">
+  <%- include('partials/flash') %>
+  <h1>Your account</h1>
+  <p class="lede tight">Signed in as <strong><%= currentUser.display_name %></strong> (<%= currentUser.email %>)<% if (currentUser.isStaff) { %> · <%= currentUser.role %><% } %>.</p>
+
+  <form class="auth-form" method="post" action="/account/display-name" style="max-width:28rem;box-shadow:none;margin:0 0 1.5rem;padding:0;background:transparent;border:0">
+    <%- include('partials/csrf') %>
+    <label class="field">
+      <span>Display name</span>
+      <input type="text" name="display_name" required minlength="2" maxlength="40" value="<%= displayNameValue %>">
+    </label>
+    <% if (typeof nameErrors !== 'undefined' && nameErrors.length) { %>
+      <div class="flash flash-error" role="alert"><% nameErrors.forEach((err) => { %><p><%= err %></p><% }) %></div>
+    <% } %>
+    <button type="submit" class="btn btn-ghost">Update display name</button>
+    <p class="field-help">Used only on reviews you choose not to post anonymously.</p>
+  </form>
+
+  <% if (currentUser.isSuspended) { %>
+    <div class="hidden-banner" role="status">
+      Your account is suspended from posting or editing reviews.
+      <% if (currentUser.suspend_reason) { %><strong>Reason:</strong> <%= currentUser.suspend_reason %><% } %>
+    </div>
+  <% } %>
+
+  <h2>Your reviews</h2>
+  <% if (!reviews.length) { %>
+    <div class="empty">
+      <p>You haven’t posted a review yet.</p>
+      <% if (!currentUser.isSuspended) { %><a class="btn btn-primary" href="/review">Write a review</a><% } %>
+    </div>
+  <% } else { %>
+    <ul class="account-reviews">
+      <% reviews.forEach((review) => { %>
+        <li>
+          <div>
+            <a href="/properties/<%= review.property.id %>#review-<%= review.id %>"><%= review.property.address %></a>
+            <p class="muted">
+              <%= review.occupancy_type === 'rented' ? 'Rented' : 'Owned' %><% if (review.anonymous) { %> · Posted anonymously<% } %>
+              <% if (review.is_sample) { %> · Sample<% } %>
+            </p>
+            <% if (review.verificationBadge) { %>
+              <p><span class="badge badge-official"><%= review.verificationBadge %></span></p>
+            <% } else if (review.verificationRequest && review.verificationRequest.status === 'pending') { %>
+              <p class="muted">Verification: in review. Check back here — there are no email notifications.</p>
+            <% } else if (review.verificationRequest && review.verificationRequest.status === 'rejected') { %>
+              <p class="muted">Verification declined: <%= review.verificationRequest.reject_reason %></p>
+            <% } %>
+            <% if (review.isPending) { %>
+              <p class="pending-banner">Pending review — not public yet.</p>
+            <% } %>
+            <% if (review.isRejected) { %>
+              <p class="hidden-banner">Not published.<% if (review.rejected_reason) { %> <strong>Reason:</strong> <%= review.rejected_reason %><% } %></p>
+            <% } %>
+            <% if (review.hidden) { %>
+              <p class="hidden-banner">Hidden from public view. <% if (review.hidden_reason) { %><strong>Reason:</strong> <%= review.hidden_reason %><% } %></p>
+            <% } %>
+          </div>
+          <div class="account-actions">
+            <% if (!currentUser.isSuspended) { %><a href="/reviews/<%= review.id %>/edit">Edit</a><% } %>
+            <% if (!review.verified && !(review.verificationRequest && review.verificationRequest.status === 'pending')) { %>
+              <a href="/reviews/<%= review.id %>/verify">Request verification</a>
+            <% } %>
+            <form class="inline-form js-confirm-delete" action="/reviews/<%= review.id %>/delete" method="post">
+              <%- include('partials/csrf') %>
+              <button type="submit" class="linkish danger">Delete</button>
+            </form>
+          </div>
+        </li>
+      <% }) %>
+    </ul>
+  <% } %>
+</main>
+
+<%- include('partials/footer') %>

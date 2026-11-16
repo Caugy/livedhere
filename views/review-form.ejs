@@ -1,0 +1,168 @@
+<%- include('partials/head') %>
+<%- include('partials/header') %>
+
+<main class="wrap page narrow">
+  <%- include('partials/flash') %>
+  <p class="crumb"><a href="/">Home</a> · <%= mode === 'edit' ? 'Edit review' : 'Write a review' %></p>
+  <h1><%= mode === 'edit' ? 'Edit your review' : 'Write a review' %></h1>
+  <p class="lede tight">Start with what you remember. Ratings are optional — skip any that don’t apply. Only the address and whether you rented or owned are required.</p>
+
+  <% if (errors && errors.length) { %>
+    <div class="flash flash-error" role="alert">
+      <strong>Please fix the following:</strong>
+      <ul><% errors.forEach((err) => { %><li><%= err %></li><% }) %></ul>
+    </div>
+  <% } %>
+
+  <form class="review-form" method="post" action="<%= mode === 'edit' ? '/reviews/' + review.id : '/review' %>" data-occupancy="<%= values.occupancyType || '' %>">
+    <%- include('partials/csrf') %>
+    <fieldset class="form-block">
+      <legend>The home</legend>
+      <div class="grid-2">
+        <label class="field span-2">
+          <span>Street address <abbr title="required">*</abbr></span>
+          <input type="text" name="street" required maxlength="120" autocomplete="street-address" value="<%= values.street %>">
+        </label>
+        <label class="field">
+          <span>Unit / apt <span class="optional">(optional)</span></span>
+          <input type="text" name="unit" maxlength="20" value="<%= values.unit %>" placeholder="2B">
+        </label>
+        <label class="field">
+          <span>City <abbr title="required">*</abbr></span>
+          <input type="text" name="city" required maxlength="80" autocomplete="address-level2" value="<%= values.city %>">
+        </label>
+        <label class="field">
+          <span>State <abbr title="required">*</abbr></span>
+          <select name="state" required>
+            <option value="">Select</option>
+            <% states.forEach(([code, name]) => { %>
+              <option value="<%= code %>" <%= values.state === code ? 'selected' : '' %>><%= name %></option>
+            <% }) %>
+          </select>
+        </label>
+        <label class="field">
+          <span>ZIP <abbr title="required">*</abbr></span>
+          <input type="text" name="zip" required maxlength="10" inputmode="numeric" autocomplete="postal-code" value="<%= values.zip %>">
+        </label>
+      </div>
+
+      <fieldset class="segmented-wrap">
+        <legend>I <abbr title="required">*</abbr></legend>
+        <div class="segmented" role="radiogroup">
+          <label class="<%= values.occupancyType === 'rented' ? 'is-selected' : '' %>">
+            <input type="radio" name="occupancy_type" value="rented" required <%= values.occupancyType === 'rented' ? 'checked' : '' %>>
+            Rented this home
+          </label>
+          <label class="<%= values.occupancyType === 'owned' ? 'is-selected' : '' %>">
+            <input type="radio" name="occupancy_type" value="owned" required <%= values.occupancyType === 'owned' ? 'checked' : '' %>>
+            Owned this home
+          </label>
+        </div>
+      </fieldset>
+
+      <div class="grid-2">
+        <label class="field">
+          <span>Lived here from <span class="optional">(optional)</span></span>
+          <select name="year_from">
+            <option value="">Year</option>
+            <% yearOptions.forEach((year) => { %>
+              <option value="<%= year %>" <%= values.yearFrom === year ? 'selected' : '' %>><%= year %></option>
+            <% }) %>
+          </select>
+        </label>
+        <label class="field" data-hide-if-current>
+          <span>Until <span class="optional">(optional)</span></span>
+          <select name="year_to" <%= values.stillLiving ? 'disabled' : '' %>>
+            <option value="">Year</option>
+            <% yearOptions.forEach((year) => { %>
+              <option value="<%= year %>" <%= values.yearTo === year ? 'selected' : '' %>><%= year %></option>
+            <% }) %>
+          </select>
+        </label>
+      </div>
+      <label class="check">
+        <input type="checkbox" name="still_living" value="1" <%= values.stillLiving ? 'checked' : '' %>>
+        I still live here
+      </label>
+    </fieldset>
+
+    <fieldset class="form-block">
+      <legend>Your review</legend>
+      <p class="field-help">This is the most useful part. Write it like you’d tell a friend who was about to sign a lease or make an offer.</p>
+      <label class="field">
+        <span>What was it like to live here? <span class="optional">(optional, but encouraged)</span></span>
+        <textarea name="review_text" rows="10" maxlength="8000" placeholder="The heat, the landlord, the street at night, the light in the kitchen — whatever stuck with you."><%= values.reviewText %></textarea>
+      </label>
+      <label class="check">
+        <input type="checkbox" name="anonymous" value="1" <%= values.anonymous ? 'checked' : '' %>>
+        Post anonymously
+      </label>
+      <p class="field-help">On by default. The public will see “Anonymous resident,” or “Anonymous verified renter/owner” if this address is verified — never your display name.</p>
+    </fieldset>
+
+    <fieldset class="form-block">
+      <legend>Ratings <span class="optional">(all optional)</span></legend>
+      <p class="field-help">Rate only what you want. Every category is 1–5 stars and can be skipped. Open a section to add detail.</p>
+
+      <% RATING_GROUPS.forEach((group, index) => { %>
+        <details class="rating-group<%= group.showIf ? ' show-if-' + group.showIf : '' %>" <%= index === 0 ? 'open' : '' %> <% if (group.showIf) { %>data-show-if="<%= group.showIf %>"<% } %>>
+          <summary><%= group.label %><% if (group.showIf === 'rented') { %> <span class="optional">for renters</span><% } %><% if (group.showIf === 'owned') { %> <span class="optional">for owners</span><% } %></summary>
+          <div class="star-list">
+            <% group.categories.forEach((cat) => { %>
+              <div class="star-field">
+                <span class="star-field-label" id="label-<%= cat.id %>"><%= cat.label %></span>
+                <div class="star-input" role="radiogroup" aria-labelledby="label-<%= cat.id %>">
+                  <% for (let n = 1; n <= 5; n++) { %>
+                    <label class="star-opt" title="<%= n %> star<%= n === 1 ? '' : 's' %>">
+                      <input type="radio" name="rating_<%= cat.id %>" value="<%= n %>" <%= values.ratings[cat.id] === n ? 'checked' : '' %>>
+                      <span aria-hidden="true">★</span>
+                      <span class="sr-only"><%= n %></span>
+                    </label>
+                  <% } %>
+                  <button type="button" class="star-clear" data-clear="rating_<%= cat.id %>" hidden>Clear</button>
+                </div>
+              </div>
+            <% }) %>
+          </div>
+        </details>
+      <% }) %>
+    </fieldset>
+
+    <fieldset class="form-block">
+      <legend>Wrap-up</legend>
+      <label class="field">
+        <span>Pros <span class="optional">(optional)</span></span>
+        <textarea name="pros" rows="3" maxlength="1000" placeholder="What you’d miss."><%= values.pros %></textarea>
+      </label>
+      <label class="field">
+        <span>Cons <span class="optional">(optional)</span></span>
+        <textarea name="cons" rows="3" maxlength="1000" placeholder="What you’d warn someone about."><%= values.cons %></textarea>
+      </label>
+      <fieldset class="segmented-wrap">
+        <legend>Would you recommend this home? <span class="optional">(optional)</span></legend>
+        <div class="segmented" role="radiogroup">
+          <label class="<%= values.wouldRecommend === 1 ? 'is-selected' : '' %>">
+            <input type="radio" name="would_recommend" value="yes" <%= values.wouldRecommend === 1 ? 'checked' : '' %>>
+            Yes
+          </label>
+          <label class="<%= values.wouldRecommend === 0 ? 'is-selected' : '' %>">
+            <input type="radio" name="would_recommend" value="no" <%= values.wouldRecommend === 0 ? 'checked' : '' %>>
+            No
+          </label>
+        </div>
+        <button type="button" class="star-clear" data-clear="would_recommend">Clear</button>
+      </fieldset>
+    </fieldset>
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary"><%= mode === 'edit' ? 'Save changes' : 'Publish review' %></button>
+      <% if (mode === 'edit') { %>
+        <a class="btn btn-ghost" href="/properties/<%= review.property_id %>">Cancel</a>
+      <% } else { %>
+        <a class="btn btn-ghost" href="/">Cancel</a>
+      <% } %>
+    </div>
+  </form>
+</main>
+
+<%- include('partials/footer') %>

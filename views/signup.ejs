@@ -1,0 +1,37 @@
+<%- include('partials/head') %>
+<%- include('partials/header') %>
+
+<main class="wrap page narrow">
+  <%- include('partials/flash') %>
+  <h1>Create an account</h1>
+  <p class="lede tight">Your display name appears on reviews unless you choose to post as “Verified resident.”</p>
+
+  <% if (errors && errors.length) { %>
+    <div class="flash flash-error" role="alert">
+      <ul><% errors.forEach((err) => { %><li><%= err %></li><% }) %></ul>
+    </div>
+  <% } %>
+
+  <form class="auth-form" method="post" action="/signup">
+    <%- include('partials/csrf') %>
+    <input type="hidden" name="next" value="<%= next %>">
+    <label class="field">
+      <span>Display name</span>
+      <input type="text" name="display_name" required minlength="2" maxlength="40" autocomplete="nickname" value="<%= values.displayName %>">
+    </label>
+    <label class="field">
+      <span>Email</span>
+      <input type="email" name="email" required autocomplete="username" value="<%= values.email %>">
+    </label>
+    <label class="field">
+      <span>Password</span>
+      <input type="password" name="password" required minlength="8" autocomplete="new-password">
+      <span class="field-help">At least 8 characters.</span>
+    </label>
+    <button type="submit" class="btn btn-primary">Sign up</button>
+  </form>
+
+  <p class="muted">Already have an account? <a href="/login?next=<%= encodeURIComponent(next) %>">Log in</a>.</p>
+</main>
+
+<%- include('partials/footer') %>

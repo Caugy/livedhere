@@ -1,0 +1,195 @@
+<%- include('partials/head') %>
+<%- include('partials/header') %>
+
+<main class="wrap page">
+  <%- include('partials/flash') %>
+
+  <p class="crumb"><a href="/">Home</a> · <a href="/search?q=<%= encodeURIComponent(property.city) %>"><%= property.city %></a></p>
+
+  <header class="property-hero">
+    <div>
+      <% if (property.reviews.some((r) => r.is_sample)) { %><span class="badge badge-sample">Includes sample reviews</span><% } %>
+      <h1><%= property.street %></h1>
+      <p class="lede tight"><%= property.city %>, <%= property.state %> <%= property.zip %></p>
+    </div>
+    <div class="overall-score">
+      <div class="score-number"><%= property.aggregates.overall != null ? property.aggregates.overall.toFixed(1) : '—' %></div>
+      <%- include('partials/stars', { value: property.aggregates.overall, size: 'lg' }) %>
+      <p class="muted">
+        <%= property.reviewCount %> review<%= property.reviewCount === 1 ? '' : 's' %><% if (occupancy) { %> (<%= occupancy %>)<% } %><% if (verifiedOnly) { %> · verified only<% } %>
+        <% if (property.verifiedCount) { %><br><%= property.verifiedCount %> verified renter<%= property.verifiedCount === 1 ? '' : 's' %>/owner<%= property.verifiedCount === 1 ? '' : 's' %><% } %>
+        <% if (property.recommendPercent != null) { %><br><%= property.recommendPercent %>% would recommend<% } %>
+      </p>
+    </div>
+  </header>
+
+  <div class="toolbar">
+    <div class="filters" role="tablist" aria-label="Filter reviews">
+      <a class="chip<%= !occupancy && !verifiedOnly ? ' is-active' : '' %>" href="/properties/<%= property.id %>">All (<%= property.rentedCount + property.ownedCount %>)</a>
+      <a class="chip<%= occupancy === 'rented' ? ' is-active' : '' %>" href="/properties/<%= property.id %>?occupancy=rented<%= verifiedOnly ? '&verified=1' : '' %>">Rented (<%= property.rentedCount %>)</a>
+      <a class="chip<%= occupancy === 'owned' ? ' is-active' : '' %>" href="/properties/<%= property.id %>?occupancy=owned<%= verifiedOnly ? '&verified=1' : '' %>">Owned (<%= property.ownedCount %>)</a>
+      <a class="chip<%= verifiedOnly ? ' is-active' : '' %>" href="/properties/<%= property.id %>?verified=1<%= occupancy ? '&occupancy=' + occupancy : '' %>">Verified (<%= property.verifiedCount %>)</a>
+    </div>
+    <a class="btn btn-primary" href="/review?property_id=<%= property.id %>">Review this home</a>
+  </div>
+
+  <% if (property.aggregates.groups.length) { %>
+    <section class="section">
+      <h2>Ratings</h2>
+      <p class="muted">Averages from residents who chose to rate each category. Unrated categories are omitted.</p>
+      <div class="rating-summary">
+        <% property.aggregates.groups.forEach((group) => { %>
+          <% if (!group.showIf || !occupancy || group.showIf === occupancy) { %>
+            <div class="rating-summary-group">
+              <h3><%= group.label %></h3>
+              <ul>
+                <% group.categories.forEach((cat) => { %>
+                  <li>
+                    <span class="cat-label"><%= cat.label %></span>
+                    <%- include('partials/stars', { value: cat.average, size: 'sm' }) %>
+                    <span class="cat-avg"><%= cat.average.toFixed(1) %></span>
+                    <span class="muted cat-n"><%= cat.count %></span>
+                  </li>
+                <% }) %>
+              </ul>
+            </div>
+          <% } %>
+        <% }) %>
+      </div>
+    </section>
+  <% } %>
+
+  <section class="section" id="reviews">
+    <h2>Reviews</h2>
+    <% if (!property.reviews.length) { %>
+      <div class="empty">
+        <p>No reviews<%= occupancy ? ` from people who ${occupancy} this home` : '' %> yet.</p>
+        <a class="btn btn-primary" href="/review?property_id=<%= property.id %>">Write a review</a>
+      </div>
+    <% } %>
+
+    <% property.reviews.forEach((review) => { %>
+      <article class="review-card" id="review-<%= review.id %>">
+        <header class="review-card-head">
+          <div>
+            <p class="reviewer">
+              <%= review.reviewerName %>
+              <% if (!review.anonymous && review.verificationBadge) { %><span class="badge badge-official"><%= review.verificationBadge %></span><% } %>
+              <% if (review.anonymous) { %><span class="badge badge-verified">Anonymous</span><% } %>
+              <% if (review.is_sample) { %><span class="badge badge-sample">Sample</span><% } %>
+              <% if (review.isPending) { %><span class="badge badge-pending">Pending review</span><% } %>
+              <% if (review.isRejected) { %><span class="badge badge-hidden">Not published</span><% } %>
+              <% if (review.hidden) { %><span class="badge badge-hidden">Hidden</span><% } %>
+            </p>
+            <p class="muted">
+              <%= review.occupancy_type === 'rented' ? 'Rented' : 'Owned' %><% if (review.unit) { %> · Unit <%= review.unit %><% } %><% const yrs = formatYears(review); if (yrs) { %> · <%= yrs %><% } %>
+            </p>
+          </div>
+          <div class="review-card-score">
+            <% if (review.ratings.overall != null) { %>
+              <%- include('partials/stars', { value: review.ratings.overall, size: 'md' }) %>
+              <strong><%= review.ratings.overall.toFixed(1) %></strong>
+            <% } else { %>
+              <span class="muted">No overall rating</span>
+            <% } %>
+          </div>
+        </header>
+
+        <% if (currentUser && currentUser.id === review.user_id && review.isPending) { %>
+          <div class="pending-banner" role="status">Pending review — this is not public yet. A moderator will approve or reject it. There are no email notifications; check back here.</div>
+        <% } %>
+        <% if (currentUser && currentUser.id === review.user_id && review.isRejected) { %>
+          <div class="hidden-banner" role="status">This review was not published.<% if (review.rejected_reason) { %> <strong>Reason:</strong> <%= review.rejected_reason %><% } %></div>
+        <% } %>
+        <% if (review.hidden && currentUser && currentUser.id === review.user_id) { %>
+          <div class="hidden-banner" role="status">
+            This review is hidden from public view and is not counted in the ratings.
+            <% if (review.hidden_reason) { %><strong>Reason:</strong> <%= review.hidden_reason %><% } %>
+          </div>
+        <% } %>
+
+        <% if (review.review_text) { %>
+          <p class="review-body"><%= review.review_text %></p>
+        <% } %>
+
+        <% if (review.pros || review.cons) { %>
+          <div class="pros-cons">
+            <% if (review.pros) { %><p><strong>Pros.</strong> <%= review.pros %></p><% } %>
+            <% if (review.cons) { %><p><strong>Cons.</strong> <%= review.cons %></p><% } %>
+          </div>
+        <% } %>
+
+        <% if (review.would_recommend === 1) { %>
+          <p class="recommend yes">Would recommend this home</p>
+        <% } else if (review.would_recommend === 0) { %>
+          <p class="recommend no">Would not recommend this home</p>
+        <% } %>
+
+        <% const rated = Object.entries(review.ratings); if (rated.length) { %>
+          <details class="review-ratings">
+            <summary>Category ratings (<%= rated.length %>)</summary>
+            <ul class="mini-ratings">
+              <% rated.forEach(([id, value]) => { if (CATEGORY_BY_ID[id]) { %>
+                <li>
+                  <span><%= CATEGORY_BY_ID[id].label %></span>
+                  <%- include('partials/stars', { value: value, size: 'sm' }) %>
+                  <span><%= value %></span>
+                </li>
+              <% } }) %>
+            </ul>
+          </details>
+        <% } %>
+
+        <footer class="review-card-foot">
+          <span class="muted"><% if (review.updated_at) { %>Edited · <% } %></span>
+          <% if (currentUser && currentUser.id === review.user_id) { %>
+            <a href="/reviews/<%= review.id %>/edit">Edit</a>
+            <% if (!review.verified) { %><a href="/reviews/<%= review.id %>/verify">Request verification</a><% } %>
+            <form class="inline-form js-confirm-delete" action="/reviews/<%= review.id %>/delete" method="post">
+              <%- include('partials/csrf') %>
+              <button type="submit" class="linkish danger">Delete</button>
+            </form>
+          <% } else if (currentUser) { %>
+            <% if (reportedIds.has(review.id)) { %>
+              <span class="muted">Reported</span>
+            <% } else { %>
+              <button type="button" class="linkish js-open-report" data-review-id="<%= review.id %>" data-review-excerpt="<%= (review.review_text || review.reviewerName).replace(/&/g, '&amp;').replace(/"/g, '&quot;').slice(0, 180) %>">Report</button>
+              <noscript><a href="/reviews/<%= review.id %>/report">Report</a></noscript>
+            <% } %>
+          <% } else { %>
+            <a href="/login?next=<%= encodeURIComponent('/reviews/' + review.id + '/report') %>">Log in to report</a>
+          <% } %>
+        </footer>
+      </article>
+    <% }) %>
+  </section>
+</main>
+
+<% if (currentUser) { %>
+  <dialog class="report-dialog" id="report-dialog" aria-labelledby="report-dialog-title">
+    <form method="post" id="report-form">
+    <%- include('partials/csrf') %>
+      <h2 id="report-dialog-title">Report this review</h2>
+      <p class="muted" id="report-dialog-excerpt"></p>
+      <fieldset class="segmented-wrap">
+        <legend>Why are you reporting it?</legend>
+        <% policy.REPORT_REASONS.forEach((reason) => { %>
+          <label class="check">
+            <input type="radio" name="reason" value="<%= reason.id %>" required>
+            <%= reason.label %>
+          </label>
+        <% }) %>
+      </fieldset>
+      <label class="field">
+        <span>Details <span class="optional">(optional)</span></span>
+        <textarea name="details" rows="3" maxlength="1000"></textarea>
+      </label>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Submit report</button>
+        <button type="button" class="btn btn-ghost js-close-dialog">Cancel</button>
+      </div>
+    </form>
+  </dialog>
+<% } %>
+
+<%- include('partials/footer') %>

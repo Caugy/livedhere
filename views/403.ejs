@@ -1,0 +1,8 @@
+<%- include('partials/head') %>
+<%- include('partials/header') %>
+<main class="wrap page narrow">
+  <h1>Access denied</h1>
+  <p><%= typeof message !== 'undefined' && message ? message : 'This area is for moderators and admins. If you need to report a review, use the Report link on the review itself.' %></p>
+  <p><a href="/">Back to LivedHere</a></p>
+</main>
+<%- include('partials/footer') %>
